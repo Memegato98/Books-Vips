@@ -6,16 +6,16 @@
  * copy of this file outside public source control.
  */
 export const firebaseConfig = Object.freeze({
-  apiKey: 'REEMPLAZAR_EN_DESPLIEGUE',
-  authDomain: 'REEMPLAZAR.firebaseapp.com',
-  projectId: 'REEMPLAZAR',
-  storageBucket: 'REEMPLAZAR.appspot.com',
-  messagingSenderId: '000000000000',
-  appId: '1:000000000000:web:0000000000000000000000'
+  apiKey: 'AIzaSyC23gboOPWiCY3ypwjg8l8z1H5odA8u6YI',
+  authDomain: 'vips-books-ugb.firebaseapp.com',
+  projectId: 'vips-books-ugb',
+  storageBucket: 'vips-books-ugb.firebasestorage.app',
+  messagingSenderId: '411081771764',
+  appId: '1:411081771764:web:48c5bee7d6550d9dcfaca1'
 });
 
 export const databaseSettings = Object.freeze({
-  demoMode: true,
+  demoMode: false,
   forcePasswordChangeClaim: 'mustChangePassword',
   collections: Object.freeze({
     books: 'books',
