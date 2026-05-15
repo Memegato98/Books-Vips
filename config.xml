@@ -1,0 +1,24 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="sv.edu.ugb.vipsbooks" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+  <name>VIPS Books UGB</name>
+  <description>Repositorio digital interactivo de la Editorial Universidad Gerardo Barrios.</description>
+  <author email="editorial@ugb.edu.sv" href="https://www.ugb.edu.sv/">Editorial Universidad Gerardo Barrios</author>
+  <content src="index.html" />
+  <access origin="*" />
+  <allow-navigation href="https://*.firebaseio.com/*" />
+  <allow-navigation href="https://*.googleapis.com/*" />
+  <allow-navigation href="https://*.gstatic.com/*" />
+  <allow-navigation href="https://drive.google.com/*" />
+  <allow-navigation href="https://*.onedrive.live.com/*" />
+  <allow-intent href="http://*/*" />
+  <allow-intent href="https://*/*" />
+  <allow-intent href="tel:*" />
+  <allow-intent href="mailto:*" />
+  <preference name="DisallowOverscroll" value="true" />
+  <preference name="StatusBarOverlaysWebView" value="false" />
+  <preference name="AndroidLaunchMode" value="singleTop" />
+  <preference name="android-minSdkVersion" value="24" />
+  <preference name="android-targetSdkVersion" value="35" />
+  <icon src="www/assets/icons/icon.svg" />
+  <splash src="www/assets/images/splash.svg" />
+</widget>
