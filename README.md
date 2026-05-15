@@ -13,7 +13,9 @@ Aplicación híbrida multiplataforma basada en **Apache Cordova**, **Vue 3**, **
 - Importación masiva CSV con detección de columnas, validación mínima, previsualización y reporte de errores/duplicados.
 - Dashboard con KPI y gráficas CSS para libros por categoría/año, autores, archivos, estados y publicaciones recientes.
 - Exportación de datos en CSV/Excel y reportes PDF institucionales imprimibles con logo, tabla de contenidos y filtros.
-- Configuración global desacoplada mediante `www/js/firebase/firebaseConnection.js`, modo claro/oscuro, servicios reutilizables y reglas Firebase.
+- Importación masiva CSV con detección de columnas, validación mínima, previsualización y reporte de errores/duplicados.
+- Dashboard con KPI y gráficas CSS para libros por categoría/año, autores y publicaciones recientes.
+- Configuración global desacoplada mediante `window.VIPS_ENV`, modo claro/oscuro, servicios reutilizables y reglas Firebase.
 - Assets de marca: logo, icono adaptable SVG, splash screen y portadas demo.
 
 ## Estructura
@@ -29,10 +31,10 @@ VIPSBooksUGB/
 │   ├── css/styles.css
 │   ├── js/app.js
 │   ├── js/config/env.js
-│   ├── js/firebase/firebaseConnection.js
 │   ├── js/services/firebaseService.js
 │   ├── js/store/demoData.js
 │   ├── js/utils/exporters.js
+│   ├── js/utils/
 │   └── assets/
 └── scripts/validate-project.mjs
 ```
@@ -43,15 +45,8 @@ VIPSBooksUGB/
 2. Active Authentication con proveedor correo/contraseña.
 3. Cree Firestore y Firebase Storage.
 4. Publique `firestore.rules` y `storage.rules`.
-5. Reemplace la configuración `firebaseConfig` en `www/js/firebase/firebaseConnection.js` o sustituya ese archivo desde el pipeline de despliegue.
-6. Cambie `demoMode` a `false` en `databaseSettings` para usar Firebase real.
-
-
-### Archivo dedicado de conexión
-
-La conexión a Firebase/Firestore está centralizada en `www/js/firebase/firebaseConnection.js`. El HTML ya no contiene credenciales ni parámetros de conexión. El servicio `firebaseService` solo importa y solicita la conexión desde ese módulo.
-
-> Importante: las claves web de Firebase identifican el proyecto, pero no sustituyen las reglas de seguridad. Mantenga reglas Firestore/Storage estrictas y use variables del pipeline para reemplazar este archivo en producción.
+5. Reemplace la configuración `window.VIPS_ENV.firebase` en `www/index.html` o inyéctela desde el pipeline de despliegue.
+6. Cambie `demoMode` a `false` para usar Firebase real.
 
 ### Usuario inicial
 
@@ -65,6 +60,7 @@ await admin.auth().setCustomUserClaims(uid, {
 ```
 
 La contraseña temporal `#Contra123` debe entregarse por un canal seguro y forzar cambio en el primer inicio. No se hardcodea en el frontend. El módulo de configuración permite solicitar restablecimiento por correo y cambiar contraseña con reautenticación cuando Firebase real está activo.
+La contraseña temporal `#Contra123` debe entregarse por un canal seguro y forzar cambio en el primer inicio. No se hardcodea en el frontend.
 
 ## CSV
 

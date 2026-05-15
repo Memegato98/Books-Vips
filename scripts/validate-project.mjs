@@ -5,7 +5,6 @@ const required = [
   'www/index.html',
   'www/js/app.js',
   'www/js/services/firebaseService.js',
-  'www/js/firebase/firebaseConnection.js',
   'www/js/utils/exporters.js',
   'www/css/styles.css',
   'www/assets/logos/logo.svg',
@@ -24,12 +23,9 @@ for (const token of ['VIPS Books UGB', 'app.js', 'styles.css']) {
     process.exit(1);
   }
 }
-if (index.includes('window.VIPS_ENV')) {
-  console.error('index.html must not contain Firebase connection settings; use www/js/firebase/firebaseConnection.js');
-  process.exit(1);
-}
 const app = readFileSync('www/js/app.js', 'utf8');
 for (const token of ['CatalogView', 'SettingsView', 'csv-import', 'DashboardView']) {
+for (const token of ['CatalogView', 'AdminView', 'csv-import', 'DashboardView']) {
   if (!app.includes(token)) {
     console.error(`app.js does not register ${token}`);
     process.exit(1);
