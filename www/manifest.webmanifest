@@ -1,0 +1,9 @@
+{
+  "name": "VIPS Books UGB",
+  "short_name": "VIPS Books",
+  "start_url": "./index.html#/catalogo",
+  "display": "standalone",
+  "background_color": "#f6f8fb",
+  "theme_color": "#0f3b70",
+  "icons": [{ "src": "assets/icons/icon.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
