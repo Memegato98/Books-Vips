@@ -1,0 +1,22 @@
+{
+  "name": "vips-books-ugb",
+  "version": "1.0.0",
+  "description": "VIPS Books UGB - repositorio editorial híbrido para Apache Cordova, Web y Android.",
+  "main": "www/index.html",
+  "scripts": {
+    "serve": "python3 -m http.server 8080 -d www",
+    "validate": "node scripts/validate-project.mjs",
+    "cordova:android": "cordova platform add android && cordova build android",
+    "cordova:prepare": "cordova prepare",
+    "vercel-build": "npm run validate"
+  },
+  "keywords": [
+    "cordova",
+    "firebase",
+    "vue",
+    "editorial",
+    "ugb"
+  ],
+  "author": "Editorial Universidad Gerardo Barrios",
+  "license": "MIT"
+}
