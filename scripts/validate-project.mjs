@@ -25,6 +25,7 @@ for (const token of ['VIPS Books UGB', 'app.js', 'styles.css']) {
 }
 const app = readFileSync('www/js/app.js', 'utf8');
 for (const token of ['CatalogView', 'SettingsView', 'csv-import', 'DashboardView']) {
+for (const token of ['CatalogView', 'AdminView', 'csv-import', 'DashboardView']) {
   if (!app.includes(token)) {
     console.error(`app.js does not register ${token}`);
     process.exit(1);

@@ -41,7 +41,6 @@
             <li class="nav-item"><a class="nav-link" href="#/catalogo">Catálogo</a></li>
             <li class="nav-item"><a class="nav-link" href="#/dashboard">Dashboard</a></li>
             <li class="nav-item"><a class="nav-link" href="#/admin">Administración</a></li>
-            <li class="nav-item"><a class="nav-link" href="#/configuracion">Configuración</a></li>
             <li class="nav-item"><button class="btn btn-sm btn-outline-light" @click="toggleTheme">{{ state.theme === 'dark' ? 'Tema claro' : 'Tema oscuro' }}</button></li>
           </ul>
         </div>
@@ -50,11 +49,10 @@
 
     <main>
       <hero-view v-if="route.name === 'home'" :stats="analytics"></hero-view>
-      <catalog-view v-if="route.name === 'catalog'" :books="state.books" :loading="state.loading" :user="state.user" @select="openBook" @quick-save="saveBook" @export-pdf="exportReport"></catalog-view>
+      <catalog-view v-if="route.name === 'catalog'" :books="state.books" :loading="state.loading" @select="openBook"></catalog-view>
       <book-detail v-if="route.name === 'book'" :book="selectedBook" @back="goCatalog"></book-detail>
       <dashboard-view v-if="route.name === 'dashboard'" :books="state.books" :activity="state.activity"></dashboard-view>
       <admin-view v-if="route.name === 'admin'" :state="state" @save-book="saveBook" @delete-book="deleteBook" @import-books="importBooks" @login="login" @logout="logout"></admin-view>
-      <settings-view v-if="route.name === 'settings'" :state="state" @save-user="saveUser" @delete-user="deleteUser" @reset-password="resetPassword" @change-password="changePassword" @sync="syncNow" @export-data="exportData" @export-report="exportReport"></settings-view>
     </main>
 
     <footer class="footer mt-5 py-4">

@@ -13,6 +13,8 @@ Aplicación híbrida multiplataforma basada en **Apache Cordova**, **Vue 3**, **
 - Importación masiva CSV con detección de columnas, validación mínima, previsualización y reporte de errores/duplicados.
 - Dashboard con KPI y gráficas CSS para libros por categoría/año, autores, archivos, estados y publicaciones recientes.
 - Exportación de datos en CSV/Excel y reportes PDF institucionales imprimibles con logo, tabla de contenidos y filtros.
+- Importación masiva CSV con detección de columnas, validación mínima, previsualización y reporte de errores/duplicados.
+- Dashboard con KPI y gráficas CSS para libros por categoría/año, autores y publicaciones recientes.
 - Configuración global desacoplada mediante `window.VIPS_ENV`, modo claro/oscuro, servicios reutilizables y reglas Firebase.
 - Assets de marca: logo, icono adaptable SVG, splash screen y portadas demo.
 
@@ -32,6 +34,7 @@ VIPSBooksUGB/
 │   ├── js/services/firebaseService.js
 │   ├── js/store/demoData.js
 │   ├── js/utils/exporters.js
+│   ├── js/utils/
 │   └── assets/
 └── scripts/validate-project.mjs
 ```
@@ -57,6 +60,7 @@ await admin.auth().setCustomUserClaims(uid, {
 ```
 
 La contraseña temporal `#Contra123` debe entregarse por un canal seguro y forzar cambio en el primer inicio. No se hardcodea en el frontend. El módulo de configuración permite solicitar restablecimiento por correo y cambiar contraseña con reautenticación cuando Firebase real está activo.
+La contraseña temporal `#Contra123` debe entregarse por un canal seguro y forzar cambio en el primer inicio. No se hardcodea en el frontend.
 
 ## CSV
 
