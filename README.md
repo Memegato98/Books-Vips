@@ -7,6 +7,12 @@ Aplicación híbrida multiplataforma basada en **Apache Cordova**, **Vue 3**, **
 - Catálogo público responsive con búsqueda en tiempo real, filtros, ordenamiento, vista grid/lista, lazy loading, paginación incremental y skeleton loaders.
 - Vista individual de libro con metadatos editoriales, palabras clave, portada, enlaces externos Drive/OneDrive y visor embebido mediante `iframe`.
 - Panel administrativo protegido con flujo de login Firebase/demo, roles, permisos, CRUD de libros, taxonomías preparadas y gestión de enlaces externos.
+- Centro de configuración rediseñado con navegación por secciones, estado visual de Firebase/Firestore, sincronización manual, exportaciones y gestión de usuarios Master.
+- Registro rápido de libros desde catálogo para usuarios Master mediante botón flotante y formulario modal con validación inmediata.
+- Cambio y recuperación de contraseña desde perfil, indicadores de fortaleza y soporte para obligación de cambio en primer inicio.
+- Importación masiva CSV con detección de columnas, validación mínima, previsualización y reporte de errores/duplicados.
+- Dashboard con KPI y gráficas CSS para libros por categoría/año, autores, archivos, estados y publicaciones recientes.
+- Exportación de datos en CSV/Excel y reportes PDF institucionales imprimibles con logo, tabla de contenidos y filtros.
 - Importación masiva CSV con detección de columnas, validación mínima, previsualización y reporte de errores/duplicados.
 - Dashboard con KPI y gráficas CSS para libros por categoría/año, autores y publicaciones recientes.
 - Configuración global desacoplada mediante `window.VIPS_ENV`, modo claro/oscuro, servicios reutilizables y reglas Firebase.
@@ -27,6 +33,7 @@ VIPSBooksUGB/
 │   ├── js/config/env.js
 │   ├── js/services/firebaseService.js
 │   ├── js/store/demoData.js
+│   ├── js/utils/exporters.js
 │   ├── js/utils/
 │   └── assets/
 └── scripts/validate-project.mjs
@@ -52,6 +59,7 @@ await admin.auth().setCustomUserClaims(uid, {
 });
 ```
 
+La contraseña temporal `#Contra123` debe entregarse por un canal seguro y forzar cambio en el primer inicio. No se hardcodea en el frontend. El módulo de configuración permite solicitar restablecimiento por correo y cambiar contraseña con reautenticación cuando Firebase real está activo.
 La contraseña temporal `#Contra123` debe entregarse por un canal seguro y forzar cambio en el primer inicio. No se hardcodea en el frontend.
 
 ## CSV
@@ -105,3 +113,16 @@ El APK se generará dentro de `platforms/android/app/build/outputs/apk/` despué
 ## Preparación para módulos futuros
 
 La arquitectura deja servicios, utilidades, store, router lógico y configuración modular para agregar préstamos digitales, EPUB, favoritos, API REST, IA, citas bibliográficas, exportación APA y multidioma.
+
+
+## Configuración avanzada
+
+El centro de configuración incluye:
+
+- **General:** parámetros visuales, tema activo y referencia a configuración desacoplada.
+- **Perfil y contraseña:** cambio de contraseña, recuperación por correo e indicador de fortaleza.
+- **Usuarios:** disponible para rol Master; permite crear/editar perfiles, asignar roles, activar/desactivar, obligar cambio de contraseña, restablecer contraseñas y revisar último acceso registrado.
+- **Base de datos:** estado de conexión Firebase/Firestore, última sincronización, fallos detectados, recomendaciones y sincronización manual con progreso.
+- **Exportaciones:** descarga de libros, usuarios y estadísticas en CSV/Excel, y reportes PDF institucionales imprimibles para resultados filtrados, libros con ISBN o sin ISBN.
+
+> Nota: la creación real de usuarios de Authentication y el cambio de custom claims deben ejecutarse desde Admin SDK o Cloud Functions. El frontend gestiona perfiles, roles funcionales y solicitudes de recuperación sin exponer credenciales administrativas.
