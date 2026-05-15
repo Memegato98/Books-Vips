@@ -8,8 +8,7 @@
     "validate": "node scripts/validate-project.mjs",
     "cordova:android": "cordova platform add android && cordova build android",
     "cordova:prepare": "cordova prepare",
-    "vercel-build": "npm run validate",
-    "firebase:create-master": "node scripts/create-master-user.mjs"
+    "vercel-build": "npm run validate"
   },
   "keywords": [
     "cordova",

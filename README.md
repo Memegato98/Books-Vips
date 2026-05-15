@@ -13,7 +13,9 @@ Aplicación híbrida multiplataforma basada en **Apache Cordova**, **Vue 3**, **
 - Importación masiva CSV con detección de columnas, validación mínima, previsualización y reporte de errores/duplicados.
 - Dashboard con KPI y gráficas CSS para libros por categoría/año, autores, archivos, estados y publicaciones recientes.
 - Exportación de datos en CSV/Excel y reportes PDF institucionales imprimibles con logo, tabla de contenidos y filtros.
-- Configuración global desacoplada mediante `www/js/firebase/firebaseConnection.js`, modo claro/oscuro, servicios reutilizables y reglas Firebase.
+- Importación masiva CSV con detección de columnas, validación mínima, previsualización y reporte de errores/duplicados.
+- Dashboard con KPI y gráficas CSS para libros por categoría/año, autores y publicaciones recientes.
+- Configuración global desacoplada mediante `window.VIPS_ENV`, modo claro/oscuro, servicios reutilizables y reglas Firebase.
 - Assets de marca: logo, icono adaptable SVG, splash screen y portadas demo.
 
 ## Estructura
@@ -29,10 +31,10 @@ VIPSBooksUGB/
 │   ├── css/styles.css
 │   ├── js/app.js
 │   ├── js/config/env.js
-│   ├── js/firebase/firebaseConnection.js
 │   ├── js/services/firebaseService.js
 │   ├── js/store/demoData.js
 │   ├── js/utils/exporters.js
+│   ├── js/utils/
 │   └── assets/
 └── scripts/validate-project.mjs
 ```
@@ -43,48 +45,22 @@ VIPSBooksUGB/
 2. Active Authentication con proveedor correo/contraseña.
 3. Cree Firestore y Firebase Storage.
 4. Publique `firestore.rules` y `storage.rules`.
-5. Reemplace la configuración `firebaseConfig` en `www/js/firebase/firebaseConnection.js` o sustituya ese archivo desde el pipeline de despliegue.
-6. Cambie `demoMode` a `false` en `databaseSettings` para usar Firebase real.
+5. Reemplace la configuración `window.VIPS_ENV.firebase` en `www/index.html` o inyéctela desde el pipeline de despliegue.
+6. Cambie `demoMode` a `false` para usar Firebase real.
 
+### Usuario inicial
 
-### Archivo dedicado de conexión
-
-La conexión a Firebase/Firestore está centralizada en `www/js/firebase/firebaseConnection.js`. El HTML ya no contiene credenciales ni parámetros de conexión. El servicio `firebaseService` solo importa y solicita la conexión desde ese módulo.
-
-> Importante: las claves web de Firebase identifican el proyecto, pero no sustituyen las reglas de seguridad. Mantenga reglas Firestore/Storage estrictas y use variables del pipeline para reemplazar este archivo en producción.
-
-### Usuario inicial Master
-
-El usuario Master se crea con Firebase Admin SDK desde un entorno seguro, nunca desde el frontend. El proyecto incluye el script `scripts/create-master-user.mjs` para crear o actualizar el usuario inicial, asignar custom claims y registrar su perfil en Firestore.
-
-1. En Firebase Console, abra **Project settings → Service accounts** y genere una llave privada JSON.
-2. Guarde el archivo fuera de `www/` y no lo suba al repositorio.
-3. Instale temporalmente Admin SDK si aún no está disponible:
-
-```bash
-npm install --no-save firebase-admin
-```
-
-4. Ejecute el script con la ruta del service account:
-
-```bash
-FIREBASE_SERVICE_ACCOUNT="/ruta/segura/service-account.json" \
-MASTER_EMAIL="saulbonilla@ugb.edu.sv" \
-MASTER_DISPLAY_NAME="SaulBonilla" \
-MASTER_PASSWORD="#Contra123" \
-npm run firebase:create-master
-```
-
-También puede usar `FIREBASE_SERVICE_ACCOUNT_JSON` si el JSON viene desde una variable segura del pipeline. El script asigna:
+Cree el usuario inicial en Firebase Authentication con correo institucional para **SaulBonilla** y asigne custom claims desde un entorno seguro de servidor/Admin SDK:
 
 ```js
-{
+await admin.auth().setCustomUserClaims(uid, {
   role: 'Master',
   mustChangePassword: true
-}
+});
 ```
 
 La contraseña temporal `#Contra123` debe entregarse por un canal seguro y forzar cambio en el primer inicio. No se hardcodea en el frontend. El módulo de configuración permite solicitar restablecimiento por correo y cambiar contraseña con reautenticación cuando Firebase real está activo.
+La contraseña temporal `#Contra123` debe entregarse por un canal seguro y forzar cambio en el primer inicio. No se hardcodea en el frontend.
 
 ## CSV
 
