@@ -1,10 +1,8 @@
-import { getDatabaseSettings, firebaseConfig, shouldUseDemoMode } from '../firebase/firebaseConnection.js';
-
-const settings = getDatabaseSettings();
-
 export const env = {
-  firebase: firebaseConfig,
-  demoMode: shouldUseDemoMode(),
-  forcePasswordChangeClaim: settings.forcePasswordChangeClaim,
-  collections: settings.collections
+  firebase: window.VIPS_ENV?.firebase ?? {},
+  demoMode: Boolean(window.VIPS_ENV?.demoMode),
+  forcePasswordChangeClaim: window.VIPS_ENV?.forcePasswordChangeClaim ?? 'mustChangePassword',
+  collections: {
+    books: 'books', categories: 'categories', subjects: 'subjects', publicationTypes: 'publicationTypes', users: 'users', activity: 'activity'
+  }
 };

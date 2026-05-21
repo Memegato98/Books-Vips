@@ -1,70 +1,65 @@
-import { createApp, reactive, ref, computed, onMounted } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js';
+import { createApp, computed, reactive, ref, onMounted, watch } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js';
 import { firebaseService } from './services/firebaseService.js';
-import { demoBooks, demoCategories, demoCollections } from './store/demoData.js';
-import { openPdfReport, bookColumns, exportCsv, exportExcel } from './utils/exporters.js';
+import { can, sanitizeText, safeUrl } from './utils/security.js';
+import { parseCsv, findDuplicates } from './utils/csv.js';
 
-const state = reactive({ books: [], categories: [], collections: [], users: [], user: null, loading: true, theme: localStorage.getItem('theme') || 'light', connection: { connected: false, mode: 'demo', lastSyncAt: null, recommendation: '' }, toasts: [] });
-const route = reactive({ name: 'catalog' });
-const ui = reactive({ navOpen: false, cardSize: localStorage.getItem('cardSize') || 'md' });
+const state = reactive({ books: [], loading: true, user: null, theme: localStorage.getItem('theme') || 'light', toasts: [], activity: [] });
+const ui = reactive({ navOpen: false });
+const route = reactive({ name: 'home', params: {} });
+const emptyBook = () => ({ title: '', subtitle: '', authors: [], collaborators: [], editor: 'Editorial UGB', year: new Date().getFullYear(), isbn: '', type: '', subject: '', categories: [], keywords: [], summary: '', cover: '', files: [] });
+function toast(message, type = 'success') { const id = crypto.randomUUID(); state.toasts.push({ id, message, type }); setTimeout(() => state.toasts = state.toasts.filter((item) => item.id !== id), 4200); }
+function setRoute() { const [name = '', id = ''] = location.hash.replace(/^#\/?/, '').split('/'); route.name = ({ '': 'home', catalogo: 'catalog', libro: 'book', dashboard: 'dashboard', admin: 'admin' })[name] ?? 'home'; route.params = { id }; ui.navOpen = false; }
+function taxonomy(books, key) { return [...new Set(books.flatMap((book) => Array.isArray(book[key]) ? book[key] : [book[key]]).filter(Boolean))].sort(); }
 
-const can = (perm) => state.user?.role === 'Master' || (state.user?.role === 'Administrador' && perm !== 'master');
-const toast = (m, t='success') => { const id = crypto.randomUUID(); state.toasts.push({id,m,t}); setTimeout(()=> state.toasts = state.toasts.filter(x=>x.id!==id), 3500); };
-const go = (name) => { route.name = name; location.hash = `#/${name}`; ui.navOpen=false; };
-const syncRoute = () => { route.name = location.hash.replace('#/','') || 'catalog'; };
-const emptyBook = () => ({ title:'', year: new Date().getFullYear(), isbn:'', type:'', subject:'', categories:[], collectionIds:[], authors:[], status:'Publicado', visibility:'public', summary:'', files:[], privateLinks:[] });
+const HeroView = { props: ['stats'], template: `
+<section class="hero"><div class="container"><div class="row align-items-center g-4"><div class="col-lg-7">
+  <span class="badge badge-soft mb-3">Repositorio editorial híbrido</span><h1 class="display-4 fw-bold">VIPS Books UGB</h1>
+  <p class="lead mb-4">Consulta, administra e impulsa el catálogo de la Editorial Universidad Gerardo Barrios con una plataforma Cordova lista para Android, web responsive y Firebase.</p>
+  <div class="d-flex flex-wrap gap-2"><a class="btn btn-warning btn-lg" href="#/catalogo">Explorar catálogo</a><a class="btn btn-outline-light btn-lg" href="#/admin">Panel administrativo</a></div>
+  <div class="row g-3 mt-4"><div class="col-4" v-for="item in stats" :key="item.label"><div class="hero-card text-center"><strong class="fs-3">{{ item.value }}</strong><small class="d-block text-secondary">{{ item.label }}</small></div></div></div>
+</div><div class="col-lg-5"><div class="hero-card"><div class="cover-stack"><div class="mock-book"></div><div class="mock-book second"></div></div><p class="mb-0 text-secondary">Enlaces Drive/OneDrive, portadas en Storage, roles, CSV y analítica integrados.</p></div></div></div></div></section>` };
 
-const app = createApp({
-  setup() {
-    const catalogFilters = reactive({ q:'', category:'', collection:'', visibility:'all' });
-    const editorialForm = reactive(emptyBook());
-    const categoryForm = reactive({ id:'', name:'', active:true, order:1 });
-    const collectionForm = reactive({ id:'', name:'', description:'', banner:'', active:true, visibility:'public' });
+const CatalogView = { props: ['books', 'loading'], emits: ['select'], setup(props) {
+  const query = ref(''), view = ref('grid'), page = ref(1), perPage = 6, sort = ref('year-desc');
+  const filters = reactive({ type: '', subject: '', author: '', year: '', isbn: '', category: '' });
+  const filtered = computed(() => {
+    const q = query.value.toLowerCase();
+    return props.books.filter((book) => (!q || [book.title, book.isbn, book.summary, ...(book.authors || [])].join(' ').toLowerCase().includes(q)) &&
+      (!filters.type || book.type === filters.type) && (!filters.subject || book.subject === filters.subject) && (!filters.author || (book.authors || []).includes(filters.author)) &&
+      (!filters.year || String(book.year) === String(filters.year)) && (!filters.isbn || book.isbn?.includes(filters.isbn)) && (!filters.category || (book.categories || []).includes(filters.category)))
+      .sort((a,b) => sort.value === 'title' ? a.title.localeCompare(b.title) : sort.value === 'year-asc' ? a.year - b.year : b.year - a.year);
+  });
+  const visible = computed(() => filtered.value.slice(0, page.value * perPage));
+  watch([query, filters, sort], () => page.value = 1, { deep: true });
+  return { query, filters, view, page, sort, filtered, visible, taxonomy, more: () => page.value++ };
+}, template: `
+<section class="section-pad"><div class="container"><div class="d-flex flex-column flex-md-row justify-content-between gap-3 mb-4"><div><span class="kicker">Catálogo público</span><h2 class="fw-bold">Publicaciones editoriales</h2></div><div class="btn-group align-self-start"><button class="btn btn-outline-primary" :class="{active:view==='grid'}" @click="view='grid'">Grid</button><button class="btn btn-outline-primary" :class="{active:view==='list'}" @click="view='list'">Lista</button></div></div>
+<div class="panel search-box p-3 mb-4"><div class="row g-2"><div class="col-lg-4"><input v-model="query" class="form-control" placeholder="Buscar título, autor, ISBN o palabra clave" /></div><div class="col-6 col-lg"><select v-model="filters.type" class="form-select"><option value="">Tipo</option><option v-for="item in taxonomy(books,'type')">{{item}}</option></select></div><div class="col-6 col-lg"><select v-model="filters.subject" class="form-select"><option value="">Materia</option><option v-for="item in taxonomy(books,'subject')">{{item}}</option></select></div><div class="col-6 col-lg"><select v-model="filters.author" class="form-select"><option value="">Autor</option><option v-for="item in taxonomy(books,'authors')">{{item}}</option></select></div><div class="col-6 col-lg"><select v-model="filters.category" class="form-select"><option value="">Categoría</option><option v-for="item in taxonomy(books,'categories')">{{item}}</option></select></div><div class="col-6 col-lg"><select v-model="sort" class="form-select"><option value="year-desc">Año ↓</option><option value="year-asc">Año ↑</option><option value="title">Título</option></select></div></div></div>
+<div v-if="loading" class="row g-4"><div class="col-md-4" v-for="n in 6"><div class="skeleton"></div></div></div>
+<div v-else-if="view==='grid'" class="row g-4"><div class="col-md-6 col-xl-4" v-for="book in visible" :key="book.id"><article class="book-card"><img class="cover" :src="book.cover || 'assets/images/cover-default.svg'" :alt="book.title" loading="lazy"/><div class="p-3"><span class="badge text-bg-light">{{book.type}}</span><h3 class="h5 mt-2">{{book.title}}</h3><p class="text-secondary mb-2">{{(book.authors||[]).join(', ')}} • {{book.year}}</p><button class="btn btn-primary btn-sm" @click="$emit('select', book)">Ver detalle</button></div></article></div></div>
+<div v-else class="d-grid gap-3"><article class="book-card list-row p-3 d-flex gap-3" v-for="book in visible" :key="book.id"><img class="cover" :src="book.cover || 'assets/images/cover-default.svg'" :alt="book.title" loading="lazy"/><div><h3 class="h5">{{book.title}}</h3><p class="text-secondary mb-1">{{(book.authors||[]).join(', ')}} • {{book.year}} • {{book.isbn}}</p><p>{{book.summary}}</p><button class="btn btn-primary btn-sm" @click="$emit('select', book)">Ver detalle</button></div></article></div>
+<div class="text-center mt-4"><button v-if="visible.length < filtered.length" class="btn btn-outline-primary" @click="more">Cargar más</button><p class="text-secondary">{{filtered.length}} resultado(s)</p></div></div></section>` };
 
-    const filteredBooks = computed(() => state.books.filter((b) => {
-      const qOk = !catalogFilters.q || [b.title,b.isbn,b.subject,(b.authors||[]).join(' ')].join(' ').toLowerCase().includes(catalogFilters.q.toLowerCase());
-      const cOk = !catalogFilters.category || (b.categories||[]).includes(catalogFilters.category);
-      const colOk = !catalogFilters.collection || (b.collectionIds||[]).includes(catalogFilters.collection);
-      const vOk = catalogFilters.visibility==='all' || b.visibility===catalogFilters.visibility;
-      return qOk && cOk && colOk && vOk && (b.visibility !== 'private' || can('admin'));
-    }));
+const BookDetail = { props: ['book'], emits: ['back'], computed: { previewUrl() { return safeUrl(this.book?.files?.[0]?.url || ''); } }, template: `
+<section class="section-pad"><div class="container" v-if="book"><button class="btn btn-link px-0" @click="$emit('back')">← Volver al catálogo</button><div class="row g-4"><div class="col-lg-4"><img class="cover rounded-4 shadow" :src="book.cover || 'assets/images/cover-default.svg'" :alt="book.title"/><div class="panel p-3 mt-3"><h3 class="h6">Archivos asociados</h3><div v-if="!book.files?.length" class="text-secondary">Sin archivos externos registrados.</div><div v-for="file in book.files" :key="file.url" class="d-flex gap-2 flex-wrap mb-2"><a class="btn btn-sm btn-primary" :href="file.url" target="_blank" rel="noopener">{{file.kind==='download'?'Descargar':'Abrir'}}</a><span>{{file.label}}</span></div></div></div><div class="col-lg-8"><span class="kicker">{{book.type}} • {{book.year}}</span><h1 class="fw-bold">{{book.title}}</h1><h2 class="h4 text-secondary">{{book.subtitle}}</h2><p class="lead">{{book.summary}}</p><dl class="row"><dt class="col-sm-3">Autores</dt><dd class="col-sm-9">{{(book.authors||[]).join(', ')}}</dd><dt class="col-sm-3">Colaboradores</dt><dd class="col-sm-9">{{(book.collaborators||[]).join(', ')}}</dd><dt class="col-sm-3">Editor</dt><dd class="col-sm-9">{{book.editor}}</dd><dt class="col-sm-3">ISBN</dt><dd class="col-sm-9">{{book.isbn}}</dd><dt class="col-sm-3">Materia</dt><dd class="col-sm-9">{{book.subject}}</dd><dt class="col-sm-3">Categorías</dt><dd class="col-sm-9"><span class="badge text-bg-light me-1" v-for="cat in book.categories">{{cat}}</span></dd><dt class="col-sm-3">Palabras clave</dt><dd class="col-sm-9">{{(book.keywords||[]).join(', ')}}</dd></dl><iframe v-if="previewUrl" class="iframe-preview" :src="previewUrl" title="Vista previa externa"></iframe></div></div></div><div v-else class="container"><div class="panel p-4">Libro no encontrado.</div></div></section>` };
 
-    const categoryCounts = computed(() => state.categories.map((c)=>({ ...c, count: state.books.filter((b)=>(b.categories||[]).includes(c.name)).length })));
+const DashboardView = { props: ['books','activity'], setup(props) { const counts = (key) => computed(() => Object.entries(props.books.reduce((acc, book) => { const items = Array.isArray(book[key]) ? book[key] : [book[key]]; items.filter(Boolean).forEach((item) => acc[item] = (acc[item] || 0) + 1); return acc; }, {})).sort((a,b)=>b[1]-a[1])); return { byCategory: counts('categories'), byYear: counts('year'), max: (rows) => Math.max(1, ...rows.map((r)=>r[1])) }; }, template: `
+<section class="section-pad"><div class="container"><span class="kicker">Analítica editorial</span><h2 class="fw-bold mb-4">Dashboard administrativo</h2><div class="row g-3 mb-4"><div class="col-md-3"><div class="metric-card p-3"><span>Total de libros</span><strong class="d-block fs-2">{{books.length}}</strong></div></div><div class="col-md-3"><div class="metric-card p-3"><span>Autores</span><strong class="d-block fs-2">{{new Set(books.flatMap(b=>b.authors||[])).size}}</strong></div></div><div class="col-md-3"><div class="metric-card p-3"><span>Categorías</span><strong class="d-block fs-2">{{new Set(books.flatMap(b=>b.categories||[])).size}}</strong></div></div><div class="col-md-3"><div class="metric-card p-3"><span>Recientes</span><strong class="d-block fs-2">{{books.filter(b=>b.year >= new Date().getFullYear()-1).length}}</strong></div></div></div><div class="row g-4"><div class="col-lg-6"><div class="panel p-4"><h3 class="h5">Libros por categoría</h3><div class="chart-bars"><div class="chart-row" v-for="row in byCategory"><span>{{row[0]}}</span><div class="chart-bar" :style="{width:(row[1]/max(byCategory)*100)+'%'}"></div><strong>{{row[1]}}</strong></div></div></div></div><div class="col-lg-6"><div class="panel p-4"><h3 class="h5">Producción por año</h3><div class="chart-bars"><div class="chart-row" v-for="row in byYear"><span>{{row[0]}}</span><div class="chart-bar" :style="{width:(row[1]/max(byYear)*100)+'%'}"></div><strong>{{row[1]}}</strong></div></div></div></div></div></div></section>` };
 
-    function toggleTheme() { state.theme = state.theme === 'dark' ? 'light' : 'dark'; localStorage.setItem('theme', state.theme); document.documentElement.dataset.theme = state.theme; }
-    function setCardSize(size) { ui.cardSize = size; localStorage.setItem('cardSize', size); }
+const AdminView = { props: ['state'], emits: ['save-book','delete-book','import-books','login','logout'], setup(props, { emit }) { const form = reactive(emptyBook()); const login = reactive({ email: 'saulbonilla@ugb.edu.sv', password: '' }); const csv = reactive({ preview: [], errors: [] }); const canDo = (permission) => can(props.state.user, permission); function edit(book) { Object.assign(form, JSON.parse(JSON.stringify(book))); } function reset() { Object.assign(form, emptyBook()); } function submit() { emit('save-book', { ...form, authors: String(form.authors).split(',').map(sanitizeText).filter(Boolean), collaborators: String(form.collaborators).split(',').map(sanitizeText).filter(Boolean), categories: String(form.categories).split(',').map(sanitizeText).filter(Boolean), keywords: String(form.keywords).split(',').map(sanitizeText).filter(Boolean), files: typeof form.files === 'string' ? form.files.split('\n').filter(Boolean).map((url, i) => ({ label: `Archivo ${i+1}`, url: safeUrl(url), kind: 'preview' })) : form.files }); reset(); } async function readCsv(event) { const text = await event.target.files[0].text(); const parsed = parseCsv(text); csv.preview = parsed.books; csv.errors = [...parsed.errors, ...findDuplicates(props.state.books, parsed.books).map((b) => `Duplicado omitible: ${b.isbn}`)]; } return { form, login, csv, canDo, edit, reset, submit, readCsv }; }, template: `
+<section class="section-pad"><div class="container"><span class="kicker">Panel protegido</span><h2 class="fw-bold">Administración editorial</h2><div v-if="!state.user" class="panel p-4 col-lg-5"><h3 class="h5">Iniciar sesión</h3><p class="text-secondary">Cree el usuario inicial SaulBonilla en Firebase Authentication y asigne rol Master con custom claims. La contraseña temporal #Contra123 debe cambiarse en el primer acceso desde Firebase/portal institucional; no se almacena en frontend.</p><input class="form-control mb-2" v-model="login.email" placeholder="Correo"/><input class="form-control mb-3" v-model="login.password" type="password" placeholder="Contraseña"/><button class="btn btn-primary" @click="$emit('login', login)">Entrar</button></div><div v-else><div class="panel p-3 mb-4 d-flex justify-content-between flex-wrap gap-2"><span>Sesión: <strong>{{state.user.displayName || state.user.email}}</strong> <span class="role-pill">{{state.user.role}}</span> <span v-if="state.user.mustChangePassword" class="badge text-bg-warning">Debe cambiar contraseña</span></span><button class="btn btn-outline-danger btn-sm" @click="$emit('logout')">Salir</button></div><div class="row g-4"><div class="col-lg-5"><div class="panel p-4"><h3 class="h5">Crear / editar libro</h3><fieldset :disabled="!canDo('books:create') && !canDo('books:update')"><input class="form-control mb-2" v-model="form.title" placeholder="Título"/><input class="form-control mb-2" v-model="form.subtitle" placeholder="Subtítulo"/><input class="form-control mb-2" v-model="form.authors" placeholder="Autores separados por coma"/><input class="form-control mb-2" v-model="form.collaborators" placeholder="Colaboradores separados por coma"/><div class="row g-2"><div class="col"><input class="form-control mb-2" v-model.number="form.year" type="number" placeholder="Año"/></div><div class="col"><input class="form-control mb-2" v-model="form.isbn" placeholder="ISBN"/></div></div><input class="form-control mb-2" v-model="form.type" placeholder="Tipo de publicación"/><input class="form-control mb-2" v-model="form.subject" placeholder="Materia"/><input class="form-control mb-2" v-model="form.categories" placeholder="Categorías"/><input class="form-control mb-2" v-model="form.keywords" placeholder="Palabras clave"/><input class="form-control mb-2" v-model="form.cover" placeholder="URL de portada o Storage"/><textarea class="form-control mb-2" v-model="form.summary" placeholder="Resumen"></textarea><textarea class="form-control mb-3" v-model="form.files" placeholder="URLs externas, una por línea"></textarea><button class="btn btn-primary" @click="submit">Guardar</button><button class="btn btn-link" @click="reset">Limpiar</button></fieldset></div><div class="panel p-4 mt-4 csv-import"><h3 class="h5">Importación masiva CSV</h3><input class="form-control" type="file" accept=".csv,text/csv" @change="readCsv"/><div class="small text-danger mt-2" v-for="error in csv.errors">{{error}}</div><button class="btn btn-warning mt-3" :disabled="!csv.preview.length" @click="$emit('import-books', csv.preview)">Importar {{csv.preview.length}} libros</button></div></div><div class="col-lg-7"><div class="panel p-4 admin-view"><h3 class="h5">Gestión de libros, autores, materias y tipos</h3><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Título</th><th>Tipo</th><th>Año</th><th></th></tr></thead><tbody><tr v-for="book in state.books" :key="book.id"><td>{{book.title}}</td><td>{{book.type}}</td><td>{{book.year}}</td><td class="text-end"><button class="btn btn-sm btn-outline-primary me-1" @click="edit(book)">Editar</button><button class="btn btn-sm btn-outline-danger" :disabled="!canDo('books:delete')" @click="$emit('delete-book', book.id)">Eliminar</button></td></tr></tbody></table></div></div></div></div></div></div></section>` };
 
-    function saveBook() {
-      if (!editorialForm.title || !editorialForm.type) return toast('Título y tipo son obligatorios.', 'error');
-      const payload = { ...editorialForm, id: editorialForm.id || crypto.randomUUID(), authors: String(editorialForm.authors||'').split(',').map(s=>s.trim()).filter(Boolean), categories: String(editorialForm.categories||'').split(',').map(s=>s.trim()).filter(Boolean), collectionIds: String(editorialForm.collectionIds||'').split(',').map(s=>s.trim()).filter(Boolean), updatedAt: new Date().toISOString().slice(0,10), createdAt: editorialForm.createdAt || new Date().toISOString().slice(0,10) };
-      const idx = state.books.findIndex(b=>b.id===payload.id); idx>=0 ? state.books.splice(idx,1,payload) : state.books.unshift(payload);
-      Object.assign(editorialForm, emptyBook());
-      toast('Producción guardada.');
-    }
-
-    function editBook(book) { Object.assign(editorialForm, JSON.parse(JSON.stringify(book))); go('editorial'); }
-    function removeBook(id) { state.books = state.books.filter((b)=>b.id!==id); toast('Producción eliminada.'); }
-
-    function saveCategory() { if (!categoryForm.name) return; const payload = { ...categoryForm, id: categoryForm.id || crypto.randomUUID() }; const idx=state.categories.findIndex(c=>c.id===payload.id); idx>=0?state.categories.splice(idx,1,payload):state.categories.push(payload); Object.assign(categoryForm,{id:'',name:'',active:true,order:state.categories.length+1}); toast('Categoría guardada.'); }
-    function saveCollection() { if (!collectionForm.name) return; const payload={ ...collectionForm, id: collectionForm.id || crypto.randomUUID()}; const idx=state.collections.findIndex(c=>c.id===payload.id); idx>=0?state.collections.splice(idx,1,payload):state.collections.push(payload); Object.assign(collectionForm,{id:'',name:'',description:'',banner:'',active:true,visibility:'public'}); toast('Colección guardada.'); }
-    function sharePrivate(book) { const token = crypto.randomUUID().replaceAll('-','').slice(0,24); const expiresAt = new Date(Date.now()+7*86400000).toISOString(); book.privateLinks = [...(book.privateLinks||[]), { token, expiresAt, active:true, url:`${location.origin}${location.pathname}#/catalog?token=${token}` }]; toast('Enlace privado generado.'); }
-
-    function exportData(type, format) {
-      const rows = type==='categories' ? categoryCounts.value : type==='collections' ? state.collections : state.books;
-      const cols = type==='categories' ? [{label:'Categoría', value:r=>r.name},{label:'Activa',value:r=>r.active?'Sí':'No'},{label:'Publicaciones',value:r=>r.count}] : type==='collections' ? [{label:'Colección',value:r=>r.name},{label:'Visibilidad',value:r=>r.visibility}] : bookColumns;
-      format==='csv' ? exportCsv(rows, cols, `vips-${type}.csv`) : exportExcel(rows, cols, `vips-${type}.xlsx`);
-    }
-
-    async function load() {
-      document.documentElement.dataset.theme = state.theme;
-      syncRoute(); addEventListener('hashchange', syncRoute);
-      try { await firebaseService.init(); state.connection = await firebaseService.getConnectionStatus(); state.user = await firebaseService.login({ email:'saulbonilla@ugb.edu.sv', password:'demo' }); }
-      catch { state.connection = { connected:false, mode:'error', recommendation:'No se pudo conectar a Firebase.' }; }
-      state.books = demoBooks; state.categories = demoCategories; state.collections = demoCollections; state.loading=false;
-    }
-
-    onMounted(load);
-    return { state, ui, route, can, go, toggleTheme, setCardSize, catalogFilters, filteredBooks, editorialForm, saveBook, editBook, removeBook, categoryForm, saveCategory, categoryCounts, collectionForm, saveCollection, sharePrivate, exportData, exportPdf: () => openPdfReport({ title:'Reporte VIPS Books UGB', subtitle:`${filteredBooks.value.length} registros`, rows: filteredBooks.value, columns: bookColumns }) };
-  }
-});
-
+const app = createApp({ components: { HeroView, CatalogView, BookDetail, DashboardView, AdminView }, setup() {
+  const selectedBook = computed(() => state.books.find((book) => book.id === route.params.id));
+  const analytics = computed(() => [{ label: 'Libros', value: state.books.length }, { label: 'Autores', value: new Set(state.books.flatMap((b) => b.authors || [])).size }, { label: 'Materias', value: new Set(state.books.map((b) => b.subject)).size }]);
+  onMounted(async () => { document.documentElement.dataset.theme = state.theme; setRoute(); addEventListener('hashchange', setRoute); try { await firebaseService.init(); state.books = await firebaseService.listBooks(); toast(`Modo ${firebaseService.mode === 'demo' ? 'demostración' : 'Firebase'} activo`); } catch (error) { toast(`No se pudo iniciar Firebase: ${error.message}`, 'error'); } finally { state.loading = false; } });
+  async function saveBook(book) { const saved = await firebaseService.saveBook(book); const index = state.books.findIndex((item) => item.id === saved.id); index >= 0 ? state.books.splice(index, 1, saved) : state.books.unshift(saved); toast('Libro guardado correctamente.'); }
+  async function deleteBook(id) { await firebaseService.deleteBook(id); state.books = state.books.filter((book) => book.id !== id); toast('Libro eliminado.'); }
+  async function importBooks(books) { for (const book of books) await saveBook(book); toast('Importación finalizada.'); }
+  async function login(credentials) { state.user = await firebaseService.login(credentials); toast(state.user.mustChangePassword ? 'Acceso concedido. Cambie la contraseña temporal.' : 'Acceso concedido.'); }
+  async function logout() { await firebaseService.logout(); state.user = null; toast('Sesión cerrada.'); }
+  function openBook(book) { location.hash = `#/libro/${book.id}`; } function goCatalog() { location.hash = '#/catalogo'; }
+  function toggleTheme() { state.theme = state.theme === 'dark' ? 'light' : 'dark'; localStorage.setItem('theme', state.theme); document.documentElement.dataset.theme = state.theme; }
+  return { state, ui, route, selectedBook, analytics, saveBook, deleteBook, importBooks, login, logout, openBook, goCatalog, toggleTheme };
+}});
 app.mount('#app');

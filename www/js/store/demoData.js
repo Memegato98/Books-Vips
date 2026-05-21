@@ -1,14 +1,6 @@
-export const demoCategories = [
-  { id: 'cat-1', name: 'Investigación', active: true, order: 1 },
-  { id: 'cat-2', name: 'Literatura', active: true, order: 2 }
-];
-export const demoCollections = [
-  { id: 'col-1', name: 'Investigaciones Científicas', description: 'Línea científica institucional', banner: '', active: true, visibility: 'public' },
-  { id: 'col-2', name: 'Documentos Institucionales', description: 'Normativas y memorias', banner: '', active: true, visibility: 'private' }
-];
 export const demoBooks = [
-  { id: 'bk-1', title: 'Investigación Aplicada UGB', year: 2026, isbn: '978-99961-0001', type: 'Libro', subject: 'Ciencia', categories: ['Investigación'], collectionIds: ['col-1'], status: 'Publicado', visibility: 'public', authors: ['Equipo UGB'], summary: 'Compendio de investigación.', files: [{ label: 'Drive', url: 'https://drive.google.com', kind: 'preview' }] },
-  { id: 'bk-2', title: 'Memoria Institucional 2025', year: 2025, isbn: '', type: 'Memoria', subject: 'Institucional', categories: ['Investigación'], collectionIds: ['col-2'], status: 'Borrador', visibility: 'private', authors: ['Secretaría General'], summary: 'Memoria anual institucional.', files: [] }
+  { id: 'bk-001', title: 'Investigación e Innovación Universitaria', subtitle: 'Aportes desde El Salvador', authors: ['Editorial UGB'], collaborators: ['Comité Científico UGB'], editor: 'Universidad Gerardo Barrios', year: 2026, isbn: '978-99961-UGB-01-1', type: 'Libro académico', subject: 'Investigación', categories: ['Ciencia', 'Universidad'], keywords: ['innovación', 'academia'], summary: 'Compendio editorial de investigaciones aplicadas y experiencias de innovación desarrolladas en la comunidad universitaria.', cover: 'assets/images/cover-research.svg', files: [{ label: 'Vista previa Drive', url: 'https://drive.google.com/', kind: 'preview' }] },
+  { id: 'bk-002', title: 'Transformación Digital y Sociedad', subtitle: 'Lecturas para la gestión del cambio', authors: ['Saúl Bonilla', 'Equipo Editorial'], collaborators: ['Vicerrectoría de Investigación'], editor: 'Editorial UGB', year: 2025, isbn: '978-99961-UGB-02-8', type: 'Manual', subject: 'Tecnología', categories: ['Tecnología', 'Gestión'], keywords: ['digital', 'sociedad'], summary: 'Guía introductoria para comprender procesos de transformación digital con enfoque social, educativo y productivo.', cover: 'assets/images/cover-digital.svg', files: [{ label: 'Descarga OneDrive', url: 'https://onedrive.live.com/', kind: 'download' }] },
+  { id: 'bk-003', title: 'Cuadernos de Ciencias Jurídicas', subtitle: 'Edición especial', authors: ['Facultad de Ciencias Jurídicas'], collaborators: ['Autores invitados'], editor: 'Editorial UGB', year: 2024, isbn: '978-99961-UGB-03-5', type: 'Revista', subject: 'Derecho', categories: ['Derecho', 'Revistas'], keywords: ['jurídico', 'investigación'], summary: 'Publicación periódica con artículos especializados sobre derechos humanos, políticas públicas y análisis normativo.', cover: 'assets/images/cover-law.svg', files: [] }
 ];
-export const demoUser = { uid: 'master-1', displayName: 'SaulBonilla', email: 'saulbonilla@ugb.edu.sv', role: 'Master', mustChangePassword: true, active: true };
-export const demoUsers = [demoUser];
+export const demoUser = { uid: 'demo-master', displayName: 'SaulBonilla', email: 'saulbonilla@ugb.edu.sv', role: 'Master', mustChangePassword: true };

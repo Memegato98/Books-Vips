@@ -1,35 +1,61 @@
-import baseConfig from './config.js';
-
-const envOverride = globalThis?.VIPS_RUNTIME_FIREBASE_CONFIG || null;
-const runtimeConfig = envOverride && typeof envOverride === 'object' ? envOverride : baseConfig;
-
-export const firebaseConfig = Object.freeze(runtimeConfig);
+/**
+ * Firebase/Firestore connection settings for VIPS Books UGB.
+ *
+ * Keep the connection definition isolated from HTML and UI code. For production,
+ * replace these placeholders during deployment or keep a private environment-specific
+ * copy of this file outside public source control.
+ */
+export const firebaseConfig = Object.freeze({
+  apiKey: 'AIzaSyC23gboOPWiCY3ypwjg8l8z1H5odA8u6YI',
+  authDomain: 'vips-books-ugb.firebaseapp.com',
+  projectId: 'vips-books-ugb',
+  storageBucket: 'vips-books-ugb.firebasestorage.app',
+  messagingSenderId: '411081771764',
+  appId: '1:411081771764:web:48c5bee7d6550d9dcfaca1'
+});
 
 export const databaseSettings = Object.freeze({
   demoMode: false,
   forcePasswordChangeClaim: 'mustChangePassword',
   collections: Object.freeze({
-    books: 'books', categories: 'categories', collections: 'collections', users: 'users'
+    books: 'books',
+    categories: 'categories',
+    subjects: 'subjects',
+    publicationTypes: 'publicationTypes',
+    users: 'users',
+    activity: 'activity'
   })
 });
 
 let firebaseConnection;
+
 export function isFirebaseConfigured(config = firebaseConfig) {
-  return Boolean(config.apiKey && config.projectId && config.authDomain);
+  return Boolean(config.apiKey) && !config.apiKey.includes('REEMPLAZAR') && Boolean(config.projectId) && !config.projectId.includes('REEMPLAZAR');
 }
-export function shouldUseDemoMode() { return databaseSettings.demoMode || !isFirebaseConfigured(); }
-export function getDatabaseSettings() { return databaseSettings; }
+
+export function shouldUseDemoMode() {
+  return databaseSettings.demoMode || !isFirebaseConfigured();
+}
+
+export function getDatabaseSettings() {
+  return databaseSettings;
+}
 
 export async function getFirebaseConnection() {
   if (firebaseConnection) return firebaseConnection;
+  if (!isFirebaseConfigured()) {
+    throw new Error('Firebase no está configurado. Actualice www/js/firebase/firebaseConnection.js o active demoMode.');
+  }
+
   const [{ initializeApp }, authSdk, firestoreSdk, storageSdk] = await Promise.all([
     import('https://www.gstatic.com/firebasejs/11.8.0/firebase-app.js'),
     import('https://www.gstatic.com/firebasejs/11.8.0/firebase-auth.js'),
     import('https://www.gstatic.com/firebasejs/11.8.0/firebase-firestore.js'),
     import('https://www.gstatic.com/firebasejs/11.8.0/firebase-storage.js')
   ]);
+
   const app = initializeApp(firebaseConfig);
-  firebaseConnection = {
+  firebaseConnection = Object.freeze({
     app,
     auth: authSdk.getAuth(app),
     db: firestoreSdk.getFirestore(app),
@@ -37,6 +63,6 @@ export async function getFirebaseConnection() {
     authSdk,
     firestoreSdk,
     storageSdk
-  };
+  });
   return firebaseConnection;
 }
